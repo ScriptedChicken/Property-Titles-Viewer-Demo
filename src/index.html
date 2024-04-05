@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Titles Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map { height: 600px; }
+    </style>
+</head>
+<body>
+    <h1>Property Titles Map</h1>
+    <div id="map"></div>
+
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Turf -->
+    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+
+    <script>
+        var propertyTitlesLayer;
+        var resourceConsentsLayer;
+        var geoServerURL = 'http://10.6.4.20:5000'
+        var map = L.map('map').setView([-41.2865, 174.7762], 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        function removeLayerIfExists(layer) {
+            if (map.hasLayer(layer)) {
+                map.removeLayer(layer);
+            }
+        }
+
+        function sendFeatureToAPI(featureGeoJSON) {
+            var apiUrl = geoServerURL + '/export';
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(featureGeoJSON)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (resourceConsentsLayer) {
+                        removeLayerIfExists(resourceConsentsLayer)
+                    }
+                console.log(data)
+                var features = data.features;
+                resourceConsentsLayer = L.geoJSON(features).addTo(map);
+                console.log('Added resource consents layer')
+            })
+            .catch(error => {
+                console.error('Error sending feature to API:', error);
+            });
+        }
+
+        map.on('moveend', function () {
+            const mapCenter = map.getBounds().getCenter();
+            const point = [mapCenter.lng, mapCenter.lat]
+            const pointGeoJSON = turf.point(point);
+            let url = geoServerURL + '/linz_vector?' + new URLSearchParams({
+                "x":pointGeoJSON.geometry.coordinates[0],
+                "y":pointGeoJSON.geometry.coordinates[1],
+                "layer":'50804'
+            })
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (propertyTitlesLayer) {
+                        if (map.hasLayer(propertyTitlesLayer)) {
+                            map.removeLayer(propertyTitlesLayer);
+                        }
+                    }
+
+                    var features = data.vectorQuery.layers[50804].features;
+                    console.log(features)
+
+                    propertyTitlesLayer = L.geoJSON(features, {
+                        onEachFeature: function (feature, layer) {
+                            layer.on('click', function () {
+                                var featureGeoJSON = {
+                                    "type": "Feature",
+                                    "properties": feature.properties,
+                                    "geometry": feature.geometry
+                                };
+
+                                // Send the feature GeoJSON to the API
+                                sendFeatureToAPI(featureGeoJSON);
+                            });
+                        }
+                    }).addTo(map);
+                })
+                .catch(error => {
+                    console.error('Error fetching property titles:', error);
+                });
+        });
+    </script>
+</body>
+</html>
