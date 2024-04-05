@@ -59,6 +59,17 @@ function sendFeatureToAPI(featureGeoJSON) {
     });
 }
 
+function countIntersectingPoints(layer, polygon) {
+    var intersectingPoints = 0;
+    console.log(layer)
+    layer.eachFeature(function (point) {
+        if (turf.booleanPointInPolygon(point.toGeoJSON().geometry, polygon.toGeoJSON().geometry)) {
+            intersectingPoints++;
+        }
+    });
+    return intersectingPoints;
+}
+
 // add points
 var wellMarker = L.AwesomeMarkers.icon({
     icon: 'droplet',
@@ -122,14 +133,16 @@ map.on('moveend', function () {
 
             propertyTitlesLayer = L.geoJSON(features, {
                 onEachFeature: function (feature, layer) {
-                    layer.on('click', function () {
-                        var featureGeoJSON = {
-                            "type": "Feature",
-                            "properties": feature.properties,
-                            "geometry": feature.geometry
-                        };
-
-                        sendFeatureToAPI(featureGeoJSON);
+                    layer.on('click', function (e) {
+                        var intersectingWellBores = countIntersectingPoints(wellBores, e.target);
+                        var intersectingResourceConsents = countIntersectingPoints(resourceConsents, e.target);
+                
+                        // Create popup content
+                        var popupContent = "Intersecting Well Bores: " + intersectingWellBores + "<br>" +
+                                           "Intersecting Resource Consents: " + intersectingResourceConsents;
+                
+                        // Display popup
+                        layer.bindPopup(popupContent).openPopup();
                     });
                 }
             }).addTo(map);
