@@ -1,6 +1,7 @@
 // variables
 var propertyTitlesLayer;
 var resourceConsentsLayer;
+var clickedFeature;
 var geoServerURL = 'http://10.6.4.20:5000'
 var map = L.map('map').setView([-41.2865, 174.7762], 20);
 
@@ -31,33 +32,31 @@ function removeLayerIfExists(layer) {
 }
 
 function sendFeatureToAPI(featureGeoJSON) {
-    var apiUrl = geoServerURL + '/export';
-    fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(featureGeoJSON)
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (resourceConsentsLayer) {
-                removeLayerIfExists(resourceConsentsLayer)
+    return new Promise((resolve, reject) => {
+        var apiUrl = geoServerURL + '/export';
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(featureGeoJSON)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
             }
-        console.log(data)
-        var features = data.features;
-        resourceConsentsLayer = L.geoJSON(features).addTo(map);
-        console.log('Added resource consents layer')
-    })
-    .catch(error => {
-        console.error('Error sending feature to API:', error);
+            return response;
+        })
+        .then(data => {
+            resolve(data);
+        })
+        .catch(error => {
+            console.error('Error sending feature to API:', error);
+            reject(error);
+        });
     });
 }
+
 
 function countIntersectingPoints(layer, polygon) {
     var intersectingPoints = 0;
@@ -68,6 +67,83 @@ function countIntersectingPoints(layer, polygon) {
         }
     });
     return intersectingPoints;
+}
+
+function featureServiceLayerToGeoJSON(featureServiceLayer) {
+    var geojsonObject = {
+        type: "FeatureCollection",
+        features: []
+    };
+    
+    featureServiceLayer.eachFeature(function(layer) {
+        var properties = layer.feature.properties;
+        var geometry = layer.feature.geometry;
+    
+        var feature = {
+            type: "Feature",
+            properties: properties,
+            geometry: geometry
+        };
+    
+        geojsonObject.features.push(feature);
+    });
+    
+    console.log(geojsonObject);
+    return geojsonObject
+}
+
+downloadBlob = (blob) => {
+    const url = window.URL.createObjectURL(blob);
+    console.log(url)
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+async function sendAndDownloadFeatures(combinedJSON) {
+    try {
+        const response = await sendFeatureToAPI(combinedJSON);
+        if (response) {
+            const blob = await response.blob();
+            console.log(blob)
+            downloadBlob(blob);
+        } else {
+            console.log("Response is empty");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+function downloadReport() {
+    var wellBoresGeoJSON = featureServiceLayerToGeoJSON(wellBores);
+    var resourceConsentsGeoJSON = featureServiceLayerToGeoJSON(resourceConsents);
+
+    var polygon = clickedFeature.toGeoJSON();
+
+    var intersectingWellBores = wellBoresGeoJSON.features.filter(function(feature) {
+        var pointCoords = feature.geometry.coordinates
+        return turf.booleanPointInPolygon(pointCoords, polygon);
+    });
+
+    var intersectingResourceConsents = resourceConsentsGeoJSON.features.filter(function(feature) {
+        return turf.booleanPointInPolygon(feature.geometry.coordinates, polygon);
+    });
+
+    var combinedJSON = {
+        'well_bores': intersectingWellBores,
+        'resource_consents': intersectingResourceConsents,
+        'coordinates':turf.centroid(polygon).geometry.coordinates,
+        
+        // change me
+        'client': 'professionals' 
+    };
+
+    sendAndDownloadFeatures(combinedJSON)
+    
 }
 
 // add points
@@ -134,14 +210,13 @@ map.on('moveend', function () {
             propertyTitlesLayer = L.geoJSON(features, {
                 onEachFeature: function (feature, layer) {
                     layer.on('click', function (e) {
-                        var intersectingWellBores = countIntersectingPoints(wellBores, e.target);
-                        var intersectingResourceConsents = countIntersectingPoints(resourceConsents, e.target);
+                        clickedFeature = e.target;
+                        var intersectingWellBores = countIntersectingPoints(wellBores, clickedFeature);
+                        var intersectingResourceConsents = countIntersectingPoints(resourceConsents, clickedFeature);
                 
-                        // Create popup content
                         var popupContent = "Intersecting Well Bores: " + intersectingWellBores + "<br>" +
-                                           "Intersecting Resource Consents: " + intersectingResourceConsents;
-                
-                        // Display popup
+                                           "Intersecting Resource Consents: " + intersectingResourceConsents + "<br>" +
+                                           "<button onclick='downloadReport()'>Download report</button>";
                         layer.bindPopup(popupContent).openPopup();
                     });
                 }
