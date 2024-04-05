@@ -4,18 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Property Titles Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <style>
-        #map { height: 600px; }
-    </style>
-</head>
-<body>
-    <h1>Property Titles Map</h1>
-    <div id="map"></div>
-
     <!-- Leaflet -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
     <!-- Turf -->
     <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
@@ -23,140 +15,25 @@
     <!-- Esri Leaflet -->
     <script src="https://unpkg.com/esri-leaflet/dist/esri-leaflet.js"></script>
 
-    <!-- Bootstrap -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/5f265d0ba6.js" crossorigin="anonymous"></script>
 
     <!-- Awesome Markers -->
     <link rel="stylesheet" href="plugins/awesome_markers/leaflet.awesome-markers.css">
     <script src="plugins/awesome_markers/leaflet.awesome-markers.js"></script>
 
-    <script>
-        var propertyTitlesLayer;
-        var resourceConsentsLayer;
-        var geoServerURL = 'http://10.6.4.20:5000'
-        var map = L.map('map').setView([-41.2865, 174.7762], 20);
+    <!-- Geosearch Plugin -->
+    <link  rel="stylesheet"  href="https://unpkg.com/leaflet-geosearch@3.0.0/dist/geosearch.css"/>
+    <script src="https://unpkg.com/leaflet-geosearch@latest/dist/bundle.min.js"></script>
 
-        function createAttributePopup (feature, layer) {
-            var popupContent = "<table>";
-            for (var prop in feature.properties) {
-                if (feature.properties.hasOwnProperty(prop)) {
-                    popupContent += "<tr><th>" + prop + "</th><td>" + feature.properties[prop] + "</td></tr>";
-                }
-            }
-            popupContent += "</table>";
-            layer.bindPopup(popupContent);
-        }
+    <!-- Main files -->
+    <link rel="stylesheet" href="css/style.css">
 
-        var wellMarker = L.AwesomeMarkers.icon({
-            icon: 'star',
-            markerColor: 'blue'
-        });
-        console.log(wellMarker)
-        var wells_bores = L.esri.featureLayer({
-            url:"https://mapping.gw.govt.nz/arcgis/rest/services/GW/Resource_Consents_P/MapServer/1",
-            onEachFeature:createAttributePopup,
-            pointToLayer: function (geojson, latlng) {
-            return L.marker(latlng, {
-              icon: wellMarker
-            });
-          }
-        }
-        ).addTo(map);
+    </body>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="js/script.js"></script>
 
-        var resourceConsentMarker = L.AwesomeMarkers.icon({icon: 'link', prefix: 'glyphicon', markerColor: 'grey', spin:true});
-        var resource_consents = L.esri.featureLayer({
-            url:"https://mapping.gw.govt.nz/arcgis/rest/services/GW/Resource_Consents_P/MapServer/0",
-            onEachFeature:createAttributePopup,
-            pointToLayer: function (geojson, latlng) {
-            return L.marker(latlng, {
-              icon: resourceConsentMarker
-            });
-          }
-        }
-        ).addTo(map);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        function removeLayerIfExists(layer) {
-            if (map.hasLayer(layer)) {
-                map.removeLayer(layer);
-            }
-        }
-
-        function sendFeatureToAPI(featureGeoJSON) {
-            var apiUrl = geoServerURL + '/export';
-            fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(featureGeoJSON)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (resourceConsentsLayer) {
-                        removeLayerIfExists(resourceConsentsLayer)
-                    }
-                console.log(data)
-                var features = data.features;
-                resourceConsentsLayer = L.geoJSON(features).addTo(map);
-                console.log('Added resource consents layer')
-            })
-            .catch(error => {
-                console.error('Error sending feature to API:', error);
-            });
-        }
-
-        map.on('moveend', function () {
-            const mapCenter = map.getBounds().getCenter();
-            const point = [mapCenter.lng, mapCenter.lat]
-            const pointGeoJSON = turf.point(point);
-            let url = geoServerURL + '/linz_vector?' + new URLSearchParams({
-                "x":pointGeoJSON.geometry.coordinates[0],
-                "y":pointGeoJSON.geometry.coordinates[1],
-                "layer":'50804'
-            })
-
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (propertyTitlesLayer) {
-                        if (map.hasLayer(propertyTitlesLayer)) {
-                            map.removeLayer(propertyTitlesLayer);
-                        }
-                    }
-
-                    var features = data.vectorQuery.layers[50804].features;
-                    console.log(features)
-
-                    propertyTitlesLayer = L.geoJSON(features, {
-                        onEachFeature: function (feature, layer) {
-                            layer.on('click', function () {
-                                var featureGeoJSON = {
-                                    "type": "Feature",
-                                    "properties": feature.properties,
-                                    "geometry": feature.geometry
-                                };
-
-                                // Send the feature GeoJSON to the API
-                                sendFeatureToAPI(featureGeoJSON);
-                            });
-                        }
-                    }).addTo(map);
-                })
-                .catch(error => {
-                    console.error('Error fetching property titles:', error);
-                });
-        });
-    </script>
-</body>
 </html>
