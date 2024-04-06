@@ -136,7 +136,9 @@ function downloadReport() {
     var combinedJSON = {
         'well_bores': intersectingWellBores,
         'resource_consents': intersectingResourceConsents,
-        'coordinates':turf.centroid(polygon).geometry.coordinates,
+        'centroid':turf.centroid(polygon).geometry.coordinates,
+        'property_titles':[polygon],
+        'zoom':map.getZoom(),
         
         // change me
         'client': 'professionals' 
@@ -147,34 +149,37 @@ function downloadReport() {
 }
 
 // add points
-var wellMarker = L.AwesomeMarkers.icon({
+var wellIconOptions = {
     icon: 'droplet',
-    prefix: 'fa',
-    markerColor: 'blue'
-});
-console.log(wellMarker)
+    backgroundColor: '#1d65a6',
+    textColor:'white',
+    iconShape:'marker',
+    borderColor:'transparent'
+}
 var wellBores = L.esri.featureLayer({
     url:"https://mapping.gw.govt.nz/arcgis/rest/services/GW/Resource_Consents_P/MapServer/1",
     onEachFeature:createAttributePopup,
     pointToLayer: function (geojson, latlng) {
     return L.marker(latlng, {
-        icon: wellMarker
+        icon: L.BeautifyIcon.icon(wellIconOptions)
     });
     }
 }
 ).addTo(map);
 
-var resourceConsentMarker = L.AwesomeMarkers.icon({
-    icon: 'file-lines', 
-    prefix: 'fa', 
-    markerColor: 'gray'
-});
+var resourceConsentIconOptions = {
+    icon: 'file-lines',
+    backgroundColor: '#292929',
+    textColor:'white',
+    iconShape:'marker',
+    borderColor:'transparent'
+}
 var resourceConsents = L.esri.featureLayer({
     url:"https://mapping.gw.govt.nz/arcgis/rest/services/GW/Resource_Consents_P/MapServer/0",
     onEachFeature:createAttributePopup,
     pointToLayer: function (geojson, latlng) {
     return L.marker(latlng, {
-        icon: resourceConsentMarker
+        icon: L.BeautifyIcon.icon(resourceConsentIconOptions)
     });
     }
 }
