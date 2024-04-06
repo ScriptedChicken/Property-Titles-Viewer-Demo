@@ -9,9 +9,9 @@ var map = L.map('map').setView([-41.2865, 174.7762], 20);
 const search = new GeoSearch.GeoSearchControl({
     provider: new GeoSearch.OpenStreetMapProvider(),
 });
-console.log(search)
 
 map.addControl(search);
+map.addControl(new L.Control.Fullscreen());
 
 // functions
 function createAttributePopup (feature, layer) {
@@ -22,7 +22,9 @@ function createAttributePopup (feature, layer) {
         }
     }
     popupContent += "</table>";
-    layer.bindPopup(popupContent);
+    layer.bindPopup(popupContent, {
+        autoPan: false
+    });
 }
 
 function removeLayerIfExists(layer) {
@@ -141,7 +143,7 @@ function downloadReport() {
         'zoom':map.getZoom(),
         
         // change me
-        'client': 'professionals' 
+        'client': 'bored_yet' 
     };
 
     sendAndDownloadFeatures(combinedJSON)
