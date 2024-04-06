@@ -10,6 +10,15 @@ const search = new GeoSearch.GeoSearchControl({
     provider: new GeoSearch.OpenStreetMapProvider(),
 });
 
+L.controlCredits({
+    imageurl: './img/bored_yet_logo.png',
+    tooltip: 'Made by Bored Yet?',
+    width: '161px',
+    height: '51.8px',
+    imagealt:'Bored Yet? logo',
+    expandcontent: 'Interactive mapping<br/>by <a href="http://boredyet.co.nz/" target="_blank">Bored Yet?</a>',
+}).addTo(map);
+
 map.addControl(search);
 map.addControl(new L.Control.Fullscreen());
 
