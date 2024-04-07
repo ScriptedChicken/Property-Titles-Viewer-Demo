@@ -3,7 +3,7 @@ var propertyTitlesLayer;
 var resourceConsentsLayer;
 var clickedFeature;
 var geoServerURL = 'http://10.6.4.20:5000'
-var map = L.map('map').setView([-41.2865, 174.7762], 20);
+var map = L.map('map', {zoomSnap: 0}).setView([-41.2865, 174.7762], 20);
 
 // add controls
 const search = new GeoSearch.GeoSearchControl({
@@ -71,7 +71,6 @@ function sendFeatureToAPI(featureGeoJSON) {
 
 function countIntersectingPoints(layer, polygon) {
     var intersectingPoints = 0;
-    console.log(layer)
     layer.eachFeature(function (point) {
         if (turf.booleanPointInPolygon(point.toGeoJSON().geometry, polygon.toGeoJSON().geometry)) {
             intersectingPoints++;
@@ -99,13 +98,11 @@ function featureServiceLayerToGeoJSON(featureServiceLayer) {
         geojsonObject.features.push(feature);
     });
     
-    console.log(geojsonObject);
     return geojsonObject
 }
 
 downloadBlob = (blob) => {
     const url = window.URL.createObjectURL(blob);
-    console.log(url)
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
@@ -119,7 +116,6 @@ async function sendAndDownloadFeatures(combinedJSON) {
         const response = await sendFeatureToAPI(combinedJSON);
         if (response) {
             const blob = await response.blob();
-            console.log(blob)
             downloadBlob(blob);
         } else {
             console.log("Response is empty");
@@ -221,7 +217,6 @@ map.on('moveend', function () {
             }
 
             var features = data.vectorQuery.layers[Number(titleLayerID)].features;
-            console.log(features)
 
             propertyTitlesLayer = L.geoJSON(features, {
                 onEachFeature: function (feature, layer) {
