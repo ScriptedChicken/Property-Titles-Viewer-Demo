@@ -11,7 +11,7 @@ const search = new GeoSearch.GeoSearchControl({
 });
 
 L.controlCredits({
-    imageurl: './img/bored_yet_logo.png',
+    imageurl: 'src/img/bored_yet_logo.png',
     tooltip: 'Made by Bored Yet?',
     width: '161px',
     height: '51.8px',
