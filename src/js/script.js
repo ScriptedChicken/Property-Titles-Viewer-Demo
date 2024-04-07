@@ -2,7 +2,7 @@
 var propertyTitlesLayer;
 var resourceConsentsLayer;
 var clickedFeature;
-var geoServerURL = 'http://10.6.4.20:5000'
+var geoServerURL = 'https://boredyet.pythonanywhere.com'
 var map = L.map('map', {zoomSnap: 0}).setView([-41.2865, 174.7762], 20);
 
 // add controls
