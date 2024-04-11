@@ -3,11 +3,33 @@ var propertyTitlesLayer;
 var resourceConsentsLayer;
 var clickedFeature;
 var geoServerURL = 'https://boredyet.pythonanywhere.com'
-var map = L.map('map', {zoomSnap: 0}).setView([-41.2865, 174.7762], 20);
+var map = L.map('map', {zoomSnap: 0, minZoom:17}).setView([-41.2865, 174.7762], 20);
 
 // add controls
 const search = new GeoSearch.GeoSearchControl({
     provider: new GeoSearch.OpenStreetMapProvider(),
+    showMarker: false
+});
+
+// make map only show NZ
+var nzBounds = L.latLngBounds(
+    [-47.2865, 166.2305],
+    [-33.5904, 178.8397]
+);
+map.setMaxBounds(nzBounds);
+
+map.on('geosearch/showlocation', function(event) {
+    var searchBounds = L.latLngBounds(event.location.bounds)
+    
+    console.log(nzBounds)
+    console.log(searchBounds)
+    // Check if the marker position is within the map bounds
+    if (!nzBounds.intersects(searchBounds)) {
+        alert('Please choose a location within New Zealand');
+        console.log(event)
+        L.DomEvent.preventDefault(event)
+        L.DomEvent.stopPropagation(event)
+    }
 });
 
 L.controlCredits({

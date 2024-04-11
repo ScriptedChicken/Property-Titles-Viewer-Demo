@@ -1,4 +1,8 @@
-#map {
+body {
+    padding: 0;
+    margin: 0;
+}
+html, body, #map {
+    height: 100%;
     width: 100%;
-    height: 100vh; /* Using viewport height to make it 100% of the browser height */
 }
